@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Heap Proxy Setup - Test Page</title>
+    <link
+      rel="stylesheet"
+      href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+    />
+    <link
+      id="favicon"
+      rel="shortcut icon"
+      href="https://files.readme.io/ad8557c-small-Favicon.png"
+      type="image/png"
+    />
+    <style>
+      body {
+        display: flex;
+        height: 100vh;
+        margin: 0;
+      }
+      #menu {
+        width: 250px;
+        background-color: white;
+        border-right: 1px solid #ddd;
+        padding: 15px;
+      }
+      #menu h5 {
+        width: 100%;
+        display: block;
+        border-bottom: 1px solid #c0c0c0;
+      }
+      .menu-item {
+        cursor: pointer;
+        margin-bottom: 10px;
+        padding: 10px;
+        font: 14px Arial;
+      }
+      .menu-item.active {
+        background-color: #007bff; /* Blue background for active link */
+        color: white; /* White text for active link */
+        border-radius: 5px;
+      }
+      .menu-item:hover {
+        background-color: #e0e0e0; /* Slight hover effect */
+      }
+      #content {
+        flex: 1;
+        padding: 20px;
+      }
+      .hidden {
+        display: none;
+      }
+      .code-sample {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-family: monospace;
+      }
+    </style>
+    <!-- BEGIN HEAP TAG -->
+    <script type="text/javascript">   
+        window.heapReadyCb=window.heapReadyCb||[],window.heap=window.heap||[],heap.load=function(e,t){window.heap.envId=e,window.heap.clientConfig=t=t||{},window.heap.clientConfig.shouldFetchServerConfig=!1;var a=document.createElement("script");a.type="text/javascript",a.async=!0,a.src="https://cdn.us.heap-api.com/config/"+e+"/heap_config.js";var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(a,r);var n=["init","startTracking","stopTracking","track","resetIdentity","identify","identifyHashed","getSessionId","getUserId","getIdentity","addUserProperties","addEventProperties","removeEventProperty","clearEventProperties","addAccountProperties","addAdapter","addTransformer","addTransformerFn","onReady","addPageviewProperties","removePageviewProperty","clearPageviewProperties","trackPageview"],i=function(e){return function(){var t=Array.prototype.slice.call(arguments,0);window.heapReadyCb.push({name:e,fn:function(){heap[e]&&heap[e].apply(heap,t)}})}};for(var p=0;p<n.length;p++)heap[n[p]]=i(n[p])};
+        heap.load("ENV_ID", { 
+            ingestServer: 'http://localhost:8087/heap' 
+        }); 
+    </script> 
+    <!-- END HEAP TAG -->
+  </head>
+  <body>
+    <div id="menu">
+      <div class="menu-item active" onclick="showSection('curl', this)">Test Your Proxy</div>
+    </div>
+    <div id="content">
+    <div id="curl" class="section">
+        <h2>Test your Proxy Setup</h2>
+        <p>
+            The Heap tag has been added to this page to send requests through the NGINX proxy -- deployed with docker, to Heap's servers. 
+            The tag has been configured to send requests to the proxy at <code>http://localhost:8087/heap</code>.<br/><br/>
+
+            Once the tag is properly configured with your <code>ENV_ID</code>, reloading this page should automatically start sending requests through the proxy,
+            due to Heap's auto-tracking feature.
+            The network tab within the developer tools of your browser should show these requests being sent. If everything is working correctly, you should receive 
+            <code>200</code> responses for each request.<br/><br/>
+            
+             Additionally, you can paste the command below into a terminal to test sending a custom payload through your proxy. You should receive a 200 response if successful.
+        </p>
+        <pre class="code-sample">
+curl -X POST 'http://localhost:8087/api/capture/v2/identify' \
+-H 'Content-Type: application/json' \
+-d '{
+    "env_id": "1772910386",
+    "user_id": "5338921732914045",
+    "identity": "test-email@heap.io",
+    "time": "2024-12-03T16:04:26.979Z"
+}'
+        </pre>
+
+      </div>
+      </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      function showSection(sectionId, element) {
+        // Hide all sections
+        $(".section").addClass("hidden");
+
+        // Show the selected section
+        $("#" + sectionId).removeClass("hidden");
+
+        // Remove active class from all menu items
+        $(".menu-item").removeClass("active");
+
+        // Add active class to the clicked menu item
+        $(element).addClass("active");
+      }
+
+      function tryIt(url, payload, buttonElement) {
+        // Disable the button while processing
+        $(buttonElement).prop("disabled", true).text("Processing...");
+        Heap.track('relay_test', 
+            { 
+                'url': url, 
+                'payload': payload 
+            });
+
+        /*
+        // Make a POST request
+        $.ajax({
+          url: url,
+          method: "POST",
+          contentType: "application/json",
+          data: JSON.stringify(payload),
+          success: function (response) {
+            // Display the response
+            $(buttonElement)
+              .siblings(".response")
+              .html("<pre>" + JSON.stringify(response, null, 2) + "</pre>");
+          },
+          error: function (xhr) {
+            // Display the error
+            $(buttonElement)
+              .siblings(".response")
+              .html("<pre>Error: " + xhr.responseText + "</pre>");
+          },
+          complete: function () {
+            // Re-enable the button
+            $(buttonElement).prop("disabled", false).text("Try It");
+          },
+        });
+        */
+      }
+    </script>
+  </body>
+</html>
