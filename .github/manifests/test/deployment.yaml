@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shypple-heap-proxy-deploy
+spec:
+  selector:
+    matchLabels:
+      app: shypple-heap-proxy
+  template:
+    metadata:
+      labels:
+        app: shypple-heap-proxy
+    spec:
+      containers:
+        - name: shypple-heap-proxy-container
+          image: shypple-heap-proxy
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: shypple-heap-proxy-config
+          resources:
+            requests:
+              memory: "100Mi"
+              cpu: "100m"
+            limits:
+              memory: "200Mi"
+              cpu: "200m"
