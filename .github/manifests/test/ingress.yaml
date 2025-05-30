@@ -11,6 +11,15 @@ metadata:
 spec:
   rules:
     - host: heap-proxy-test.shpl.io
+      http:
+        paths:
+          - backend:
+              service:
+                name: shypple-heap-proxy-service
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix
   tls:
     - hosts:
         - heap-proxy-test.shpl.io
