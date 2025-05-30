@@ -5,11 +5,13 @@ on:
   push:
     branches-ignore:
       - main
+    paths-ignore:
+      - '.github/manifests/**'
   pull_request:
     branches-ignore:
       - main
-  paths-ignore:
-    - '.github/manifests/**'
+    paths-ignore:
+      - '.github/manifests/**'
 
 env:
   GIT_REPO_NAME: ${{ github.event.repository.name }}
