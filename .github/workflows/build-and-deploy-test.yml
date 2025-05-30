@@ -1,0 +1,103 @@
+name: TEST - Build and Publish Docker Image to GCP
+
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+    branches-ignore:
+      - main
+  paths-ignore:
+    - '.github/manifests/**'
+
+env:
+  GIT_REPO_NAME: ${{ github.event.repository.name }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: "Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "Get release version"
+        run: echo "RELEASE_VERSION=${{ github.event.release.tag_name }}" >> "$GITHUB_ENV"
+
+      - name: "Set up Cloud SDK"
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: "Set up QEMU"
+        uses: docker/setup-qemu-action@v3
+
+      - name: "Set up Docker Buildx"
+        uses: docker/setup-buildx-action@v3
+
+      - name: "Authenticate with GCP"
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: "${{ secrets.GCP_SA_KEY }}"
+
+      - name: "Docker Auth"
+        env:
+          GCP_GAR_ADD: "europe-docker.pkg.dev"
+        run: gcloud auth configure-docker ${{ env.GCP_GAR_ADD }} --quiet
+
+      - name: "Extract Docker metadata"
+        id: meta
+        uses: docker/metadata-action@v5
+        env:
+          GCP_PROJECT_ID: "shypple-com"
+          GCP_GAR_ADD: "europe-docker.pkg.dev"
+          GCP_GAR_REPO: "dev"
+        with:
+          images: ${{ env.GCP_GAR_ADD }}/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_GAR_REPO }}/${{ env.GIT_REPO_NAME }}
+          tags: type=sha,enable=true,priority=100,prefix=,suffix=,format=short
+          flavor: latest=true
+
+      - name: "Build and push Docker image"
+        id: build-and-push
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          context: .
+          platforms: linux/amd64 #,linux/arm64
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  argocd-deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Setup ArgoCD CLI"
+        run: |-
+          sudo curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo chmod +x /usr/local/bin/argocd
+
+      - name: "ArgoCD Execution in TEST environment"
+        env:
+          GCP_GAR_REPO: "dev"
+          GCP_PROJECT_ID: "shypple-com"
+          GCP_GAR_ADD: "europe-docker.pkg.dev"
+          ARGOCD_SERVER: "argocd-test.shpl.io"
+          ARGOCD_AUTH_TOKEN: ${{ secrets.TEST_ARGOCD_AUTH_TOKEN }}
+        run: |-
+          argocd app create ${{ env.GIT_REPO_NAME }} \
+          --repo https://github.com/shypple/${{ env.GIT_REPO_NAME }}.git \
+          --path .github/manifests/test \
+          --dest-name in-cluster \
+          --dest-namespace ${{ env.GIT_REPO_NAME }} \
+          --sync-policy automated \
+          --sync-option CreateNamespace=true \
+          --upsert
+          argocd app get ${{ env.GIT_REPO_NAME }} --hard-refresh
+          argocd app sync ${{ env.GIT_REPO_NAME }}
+          argocd app actions run ${{ env.GIT_REPO_NAME }} restart --kind Deployment --all
+

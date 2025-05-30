@@ -1,10 +1,12 @@
-name: Build and Publish Docker Image to GCP
+name: PROD - Build and Publish Docker Image to GCP
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - 'main'
+    paths-ignore:
+      - '.github/manifests/**'
 
 env:
   GIT_REPO_NAME: ${{ github.event.repository.name }}
@@ -48,7 +50,7 @@ jobs:
         env:
           GCP_PROJECT_ID: "shypple-com"
           GCP_GAR_ADD: "europe-docker.pkg.dev"
-          GCP_GAR_REPO: "dev"
+          GCP_GAR_REPO: "prod"
         with:
           images: ${{ env.GCP_GAR_ADD }}/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_GAR_REPO }}/${{ env.GIT_REPO_NAME }}
           tags: type=sha,enable=true,priority=100,prefix=,suffix=,format=short
@@ -76,17 +78,17 @@ jobs:
           sudo curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
           sudo chmod +x /usr/local/bin/argocd
 
-      - name: "ArgoCD Execution in TEST environment"
+      - name: "ArgoCD Execution in PROD environment"
         env:
-          GCP_GAR_REPO: "dev"
+          GCP_GAR_REPO: "prod"
           GCP_PROJECT_ID: "shypple-com"
           GCP_GAR_ADD: "europe-docker.pkg.dev"
-          ARGOCD_SERVER: "argocd-test.shpl.io"
-          ARGOCD_AUTH_TOKEN: ${{ secrets.TEST_ARGOCD_AUTH_TOKEN }}
+          ARGOCD_SERVER: "argocd.shpl.io"
+          ARGOCD_AUTH_TOKEN: ${{ secrets.PROD_ARGOCD_AUTH_TOKEN }}
         run: |-
           argocd app create ${{ env.GIT_REPO_NAME }} \
           --repo https://github.com/shypple/${{ env.GIT_REPO_NAME }}.git \
-          --path .github/manifests/test \
+          --path .github/manifests/prod \
           --dest-name in-cluster \
           --dest-namespace ${{ env.GIT_REPO_NAME }} \
           --sync-policy automated \

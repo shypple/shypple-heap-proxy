@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: cloudflare
+    external-dns.alpha.kubernetes.io/hostname: heap-proxy.shpl.io
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  name: shypple-heap-proxy-ing
+  namespace: shypple-heap-proxy
+spec:
+  rules:
+    - host: heap-proxy.shpl.io
+      http:
+        paths:
+          - backend:
+              service:
+                name: shypple-heap-proxy-service
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - heap-proxy.shpl.io
+      secretName: heap-proxy-shpl-io-tls

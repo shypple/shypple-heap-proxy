@@ -1,0 +1,6 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shypple-heap-proxy-config
+data:
+  GCP_PROJECT_ID: "shypple-com"
